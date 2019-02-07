@@ -14,7 +14,7 @@ unsigned char ram[4096]; // Chip-8 RAM
 unsigned char V[16]; // V 레지스터
 unsigned short I; // I 레지스터
 unsigned short PC; // Program Counter
-unsigned char SP; // Stack Pointer
+unsigned char STKPTR; // Stack Pointer
 unsigned short STACK[16]; 
 unsigned char DT; // Delay Timer;
 unsigned char ST; // Sound Timer;
@@ -84,7 +84,7 @@ void init(HDC hdc) {
 	keymap[0xE] = 'F'; invKeymap.insert(make_pair<int, int>('F', 0xE));
 	keymap[0xF] = 'V'; invKeymap.insert(make_pair<int, int>('V', 0xF));
 
-	SP = -1;
+	STKPTR = -1;
 	PC = 0x200;
 }
 
@@ -144,10 +144,10 @@ bool decode(unsigned short opcode, HDC hdc) {
 	}
 	// 00EE - RET
 	if (opcode == 0x00EE) {
-		// 스택에 값이 있을 때 SP 값의 범위는 0 이상 16 미만이다.
-		if (SP < 16) {
-			PC = STACK[SP];
-			SP--;
+		// 스택에 값이 있을 때 STKPTR 값의 범위는 0 이상 16 미만이다.
+		if (STKPTR < 16) {
+			PC = STACK[STKPTR];
+			STKPTR--;
 		}
 	}
 	// 1nnn - JP addr
@@ -161,8 +161,8 @@ bool decode(unsigned short opcode, HDC hdc) {
 	if (getNibble(opcode, 3, 1) == 0x2) {
 		unsigned short nnn = getNibble(opcode, 2, 3);
 		// Call subroutine at nnn
-		assert(SP < 16 || SP==0xff);
-		STACK[++SP] = PC;
+		assert(STKPTR < 16 || STKPTR==0xff);
+		STACK[++STKPTR] = PC;
 		PC = nnn;
 		ret = false;
 	}
@@ -443,5 +443,6 @@ int main(int argc, char *argv[]) {
 		//draw(hdc);
 		//Sleep(1000);
 	}
+
 	return 0;
 }
