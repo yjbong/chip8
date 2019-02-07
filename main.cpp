@@ -4,6 +4,7 @@
 #include <cassert>
 #include <map>
 #include <utility>
+#include <pdcurses\curses.h>
 
 #define WIDTH 64
 #define HEIGHT 32
