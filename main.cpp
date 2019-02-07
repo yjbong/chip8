@@ -37,12 +37,13 @@ unsigned char display[WIDTH][HEIGHT];
 int keymap[16];
 map <int, int> invKeymap;
 
-void init(HDC hdc) {
+void init() {
 
 	// Init display
-	for (int x = 0; x < WIDTH; x++)
-		for (int y = 0; y < HEIGHT; y++)
-			SetPixel(hdc, x, y, RGB(0, 0, 0));
+	initscr();
+	start_color();
+	init_pair(1, COLOR_BLACK, COLOR_BLACK);
+	init_pair(2, COLOR_WHITE, COLOR_WHITE);
 
 	// Character sprite
 	ram[0 * 5 + 0] = 0xF0, ram[0 * 5 + 1] = 0x90, ram[0 * 5 + 2] = 0x90, ram[0 * 5 + 3] = 0x90, ram[0 * 5 + 4] = 0xF0; // 0
@@ -118,21 +119,25 @@ void load(const char* filename) {
 	}
 }
 
-void draw(HDC hdc) {
+void draw() {
 
+	clear();
 	for (int x = 0; x < WIDTH; x++) {
 		for (int y = 0; y < HEIGHT; y++) {
-			//SetPixel(hdc, x, y, RGB(127, x, y));
-			if (display[x][y]) SetPixel(hdc, x, y, RGB(255, 255, 255));
-			else SetPixel(hdc, x, y, RGB(0, 0, 0));
+			if (display[x][y]) attron(COLOR_PAIR(2)); // WHITE
+			else attron(COLOR_PAIR(1)); // BLACK
+			
+			mvaddch(y, WIDTH-1-x, ' ');
+
+			if (display[x][y]) attroff(COLOR_PAIR(2));
+			else attroff(COLOR_PAIR(1));
 		}
 	}
-
-	//getchar();
+	refresh();
 }
 
 // PC가 특정값으로 쓰여졌다면 false, 그렇지 않으면 true를 리턴하게 한다.
-bool decode(unsigned short opcode, HDC hdc) {
+bool decode(unsigned short opcode) {
 
 	bool ret = true;
 
@@ -193,8 +198,8 @@ bool decode(unsigned short opcode, HDC hdc) {
 		unsigned short kk = getNibble(opcode, 1, 2);
 		// The interpreter puts the value kk into register Vx.
 		unsigned short x = getNibble(opcode, 2, 1);
-		assert(x != 0xf);
-		V[x] = kk;
+		//assert(x != 0xf);
+		V[x] = kk & 0xff;
 	}
 	// 7xkk - ADD Vx, byte
 	if (getNibble(opcode, 3, 1) == 0x7) {
@@ -304,7 +309,7 @@ bool decode(unsigned short opcode, HDC hdc) {
 		// The result are stored in Vx.
 		unsigned short x = getNibble(opcode, 2, 1);
 		assert(x != 0xF);
-		V[x] == ((rand()) & 0xff) & kk;
+		V[x] = (rand()%256) & kk;
 	}
 	// Dxyn - DRW Vx, Vy, nibble
 	if (getNibble(opcode, 3, 1) == 0xD) {
@@ -325,10 +330,12 @@ bool decode(unsigned short opcode, HDC hdc) {
 				if (oldPixel && (!newPixel)) V[0xF] = 1;
 				display[(V[x] + j) % WIDTH][(V[y] + i) % HEIGHT] = newPixel;
 
+				/*
 				if (oldPixel != newPixel) {
 					if (newPixel) SetPixel(hdc, (V[x] + j) % WIDTH, (V[y] + i) % HEIGHT, RGB(255, 255, 255));
 					else SetPixel(hdc, (V[x] + j) % WIDTH, (V[y] + i) % HEIGHT, RGB(0, 0, 0));
 				}
+				*/
 			}
 		}
 	}
@@ -338,14 +345,26 @@ bool decode(unsigned short opcode, HDC hdc) {
 			unsigned short x = getNibble(opcode, 2, 1);
 			assert(V[x] <= 0xF);
 			// Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2.
-			if (GetAsyncKeyState(keymap[V[x]]) & 0x8000) PC += 2;
+			if (GetAsyncKeyState(keymap[V[x]]) & 0x8000) {
+				printf("Key '%c' is down!\n", keymap[V[x]]);
+				PC += 2;
+			}
+			else {
+				printf("Key '%c' is not down!\n", keymap[V[x]]);
+			}
 		}
 		// ExA1 - SKNP Vx
 		if (getNibble(opcode, 1, 2) == 0x9E) {
 			unsigned short x = getNibble(opcode, 2, 1);
 			assert(V[x] <= 0xF);
 			// Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2.
-			if (!(GetAsyncKeyState(keymap[V[x]]) & 0x8000)) PC += 2;
+			if (!(GetAsyncKeyState(keymap[V[x]]) & 0x8000)) {
+				printf("Key '%c' is up!\n", keymap[V[x]]);
+				PC += 2;
+			}
+			else {
+				printf("Key '%c' is not up!\n", keymap[V[x]]);
+			}
 		}
 	}
 	if (getNibble(opcode, 3, 1) == 0xF) {
@@ -426,24 +445,18 @@ bool decode(unsigned short opcode, HDC hdc) {
 
 int main(int argc, char *argv[]) {
 
-	HWND hwnd = GetConsoleWindow();
-	if (hwnd != NULL) { SetWindowPos(hwnd, 0, 0, 0, 1000, 300, SWP_SHOWWINDOW | SWP_NOMOVE); }
-	//HDC hdc = GetDC(GetConsoleWindow());
-	HDC hdc = GetDC(hwnd);
-
-	init(hdc);
+	init();
 	load(argv[1]);
-	//load("BLINKY");
 
 	while (1) {
 		if (DT > 0) DT--;
 		if (ST > 0) ST--;
 		unsigned short opcode = (ram[PC] << 8) | ram[PC + 1];
-		//printf("\t\topcode[0x%03x] = %04x\n", PC, opcode);
-		if (decode(opcode, hdc)) PC += 2;
-		//draw(hdc);
-		//Sleep(1000);
+		
+		if (decode(opcode)) PC += 2;
+		draw();
 	}
 
+	endwin();
 	return 0;
 }
