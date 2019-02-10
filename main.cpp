@@ -365,7 +365,7 @@ bool decode(unsigned short opcode) {
 			}
 		}
 		// ExA1 - SKNP Vx
-		if (getNibble(opcode, 1, 2) == 0x9E) {
+		if (getNibble(opcode, 1, 2) == 0xA1) {
 			unsigned short x = getNibble(opcode, 2, 1);
 			assert(V[x] <= 0xF);
 			// Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2.
