@@ -36,6 +36,7 @@ unsigned char display[WIDTH][HEIGHT];
 
 int keymap[16];
 map <int, int> invKeymap;
+bool keyPressed[16];
 
 void init() {
 
@@ -86,8 +87,18 @@ void init() {
 	keymap[0xE] = 'F'; invKeymap.insert(make_pair<int, int>('F', 0xE));
 	keymap[0xF] = 'V'; invKeymap.insert(make_pair<int, int>('V', 0xF));
 
+	// Key status
+	for (int i = 0; i < 16; i++) keyPressed[i] = false;
+
 	STKPTR = -1;
 	PC = 0x200;
+}
+
+void updateKeyStatus() {
+	for (int i = 0; i < 16; i++) {
+		if (GetAsyncKeyState(keymap[i]) & 0x8000) keyPressed[i] = true;
+		else keyPressed[i] = false;
+	}
 }
 
 // Get nibbles (nibble digit place: 3210, 3 is the most significant nibble.)
@@ -345,7 +356,7 @@ bool decode(unsigned short opcode) {
 			unsigned short x = getNibble(opcode, 2, 1);
 			assert(V[x] <= 0xF);
 			// Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2.
-			if (GetAsyncKeyState(keymap[V[x]]) & 0x8000) {
+			if (keyPressed[V[x]] == true) {
 				printf("Key '%c' is down!\n", keymap[V[x]]);
 				PC += 2;
 			}
@@ -358,7 +369,7 @@ bool decode(unsigned short opcode) {
 			unsigned short x = getNibble(opcode, 2, 1);
 			assert(V[x] <= 0xF);
 			// Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2.
-			if (!(GetAsyncKeyState(keymap[V[x]]) & 0x8000)) {
+			if (keyPressed[V[x]] == false) {
 				printf("Key '%c' is up!\n", keymap[V[x]]);
 				PC += 2;
 			}
@@ -449,6 +460,7 @@ int main(int argc, char *argv[]) {
 	load(argv[1]);
 
 	while (1) {
+		updateKeyStatus();
 		if (DT > 0) DT--;
 		if (ST > 0) ST--;
 		unsigned short opcode = (ram[PC] << 8) | ram[PC + 1];
