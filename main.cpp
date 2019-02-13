@@ -42,6 +42,7 @@ void init() {
 
 	// Init display
 	initscr();
+	clear();
 	start_color();
 	init_pair(1, COLOR_BLACK, COLOR_BLACK);
 	init_pair(2, COLOR_WHITE, COLOR_WHITE);
@@ -128,23 +129,6 @@ void load(const char* filename) {
 		ch = fgetc(fp);
 		ram[idx++] = ch;
 	}
-}
-
-void draw() {
-
-	clear();
-	for (int x = 0; x < WIDTH; x++) {
-		for (int y = 0; y < HEIGHT; y++) {
-			if (display[x][y]) attron(COLOR_PAIR(2)); // WHITE
-			else attron(COLOR_PAIR(1)); // BLACK
-			
-			mvaddch(y, WIDTH-1-x, ' ');
-
-			if (display[x][y]) attroff(COLOR_PAIR(2));
-			else attroff(COLOR_PAIR(1));
-		}
-	}
-	refresh();
 }
 
 // PC가 특정값으로 쓰여졌다면 false, 그렇지 않으면 true를 리턴하게 한다.
@@ -341,12 +325,19 @@ bool decode(unsigned short opcode) {
 				if (oldPixel && (!newPixel)) V[0xF] = 1;
 				display[(V[x] + j) % WIDTH][(V[y] + i) % HEIGHT] = newPixel;
 
-				/*
 				if (oldPixel != newPixel) {
-					if (newPixel) SetPixel(hdc, (V[x] + j) % WIDTH, (V[y] + i) % HEIGHT, RGB(255, 255, 255));
-					else SetPixel(hdc, (V[x] + j) % WIDTH, (V[y] + i) % HEIGHT, RGB(0, 0, 0));
+					if (newPixel) attron(COLOR_PAIR(2)); // WHITE
+					else attron(COLOR_PAIR(1)); // BLACK
+
+					int cy = (V[y] + i) % HEIGHT;
+					int cx = (V[x] + j) % WIDTH;
+					mvaddch(cy, WIDTH - 1 - cx, ' ');
+
+					if (display[x][y]) attroff(COLOR_PAIR(2));
+					else attroff(COLOR_PAIR(1));
+
+					refresh();
 				}
-				*/
 			}
 		}
 	}
@@ -466,7 +457,7 @@ int main(int argc, char *argv[]) {
 		unsigned short opcode = (ram[PC] << 8) | ram[PC + 1];
 		
 		if (decode(opcode)) PC += 2;
-		draw();
+		Sleep(1);
 	}
 
 	endwin();
