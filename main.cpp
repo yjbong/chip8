@@ -139,9 +139,17 @@ bool decode(unsigned short opcode) {
 	// 00E0 - CLS
 	if (opcode == 0x00E0) {
 		// Clear the display
-		for (int i = 0; i < HEIGHT; i++)
-			for (int j = 0; j < WIDTH; j++)
-				display[i][j] = 0;
+		attron(COLOR_PAIR(1)); // BLACK
+		for (int i = 0; i < HEIGHT; i++) {
+			for (int j = 0; j < WIDTH; j++) {
+				if (display[j][i] != 0) {
+					mvaddch(i, WIDTH - 1 - j, ' ');
+					display[j][i] = 0;
+				}
+			}
+		}
+		attroff(COLOR_PAIR(1));
+		refresh();
 	}
 	// 00EE - RET
 	if (opcode == 0x00EE) {
@@ -333,7 +341,7 @@ bool decode(unsigned short opcode) {
 					int cx = (V[x] + j) % WIDTH;
 					mvaddch(cy, WIDTH - 1 - cx, ' ');
 
-					if (display[x][y]) attroff(COLOR_PAIR(2));
+					if (newPixel) attroff(COLOR_PAIR(2));
 					else attroff(COLOR_PAIR(1));
 
 					refresh();
