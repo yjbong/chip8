@@ -42,7 +42,6 @@ void init() {
 
 	// Init display
 	initscr();
-	clear();
 	start_color();
 	init_pair(1, COLOR_BLACK, COLOR_BLACK);
 	init_pair(2, COLOR_WHITE, COLOR_WHITE);
@@ -143,7 +142,7 @@ bool decode(unsigned short opcode) {
 		for (int i = 0; i < HEIGHT; i++) {
 			for (int j = 0; j < WIDTH; j++) {
 				if (display[j][i] != 0) {
-					mvaddch(i, WIDTH - 1 - j, ' ');
+					mvaddch(i, j, ' ');
 					display[j][i] = 0;
 				}
 			}
@@ -327,27 +326,26 @@ bool decode(unsigned short opcode) {
 		V[0xF] = 0;
 		for (int i = 0; i < n; i++) {
 			for (int j = 0; j < 8; j++) {
+				int cy = (V[y] + i) % HEIGHT;
+				int cx = (V[x] + 7 - j) % WIDTH;
 				unsigned char bit = (ram[I + i] & (1 << j)) >> j;
-				unsigned char oldPixel = display[(V[x] + j) % WIDTH][(V[y] + i) % HEIGHT];
+				unsigned char oldPixel = display[cx][cy];
 				unsigned char newPixel = oldPixel ^ bit;
+
 				if (oldPixel && (!newPixel)) V[0xF] = 1;
-				display[(V[x] + j) % WIDTH][(V[y] + i) % HEIGHT] = newPixel;
+				display[cx][cy] = newPixel;
 
 				if (oldPixel != newPixel) {
+
 					if (newPixel) attron(COLOR_PAIR(2)); // WHITE
 					else attron(COLOR_PAIR(1)); // BLACK
-
-					int cy = (V[y] + i) % HEIGHT;
-					int cx = (V[x] + j) % WIDTH;
-					mvaddch(cy, WIDTH - 1 - cx, ' ');
-
+					mvaddch(cy, cx, ' ');
 					if (newPixel) attroff(COLOR_PAIR(2));
 					else attroff(COLOR_PAIR(1));
-
-					refresh();
 				}
 			}
 		}
+		refresh();
 	}
 	if (getNibble(opcode, 3, 1) == 0xE) {
 		// Ex9E - SKP Vx
