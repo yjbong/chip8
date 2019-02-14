@@ -459,7 +459,10 @@ int main(int argc, char *argv[]) {
 	while (1) {
 		updateKeyStatus();
 		if (DT > 0) DT--;
-		if (ST > 0) ST--;
+		if (ST > 0) {
+			MessageBeep(MB_OK);
+			ST--;
+		}
 		unsigned short opcode = (ram[PC] << 8) | ram[PC + 1];
 		
 		if (decode(opcode)) PC += 2;
